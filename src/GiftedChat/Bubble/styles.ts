@@ -76,6 +76,53 @@ const styles = {
       color: Color.black,
       fontWeight: 'semibold',
     },
+    reactionContainer: {
+      backgroundColor: Color.white,
+      position: 'absolute',
+      minWidth: 36,
+      height: 18,
+      borderRadius: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: Color.leftBubbleBackground,
+      bottom: -32,
+      zIndex: 10,
+      shadowColor: Color.leftBubbleBackground,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 3,
+      flexDirection: 'row',
+      gap: 2,
+    },
+    reactionEmojiText: {
+      fontSize: 10,
+    },
+    reactionCountText: {
+      fontSize: 12,
+    },
+    sendingIndicator: {
+      height: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 8,
+    },
+    errorContainer: {
+      marginTop: 4,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    errorIcon: {
+      width: 12,
+      height: 12,
+    },
+    errorText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: Color.alizarin,
+    },
   }),
 };
 

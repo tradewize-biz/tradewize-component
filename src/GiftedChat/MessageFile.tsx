@@ -1,7 +1,6 @@
 import React, { useEffect, useState, memo, useRef } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -249,49 +248,46 @@ export function MessageFile({
 
         onSaveThumbnail?.(newArrMedia);
         setArrMedia(newArrMedia);
-      } catch (error) {
-        console.log('error fetchData media', error);
+      } catch (_error) {
+        // Thumbnail generation failed silently
       }
     };
     fetchData();
-  }, [currentMessage, onSaveThumbnail]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMessage._id, currentMessage.file?.length, onSaveThumbnail]);
 
   const arrMediaShow = isShowAll ? arrMedia : arrMedia?.slice(0, 8);
   const size = calcSize(!!isShowAll, messageWidth);
 
+  // Group items into rows of 4 for grid layout
+  const rows: FileMessage[][] = [];
+  for (let i = 0; i < arrMediaShow.length; i += 4) {
+    rows.push(arrMediaShow.slice(i, i + 4));
+  }
+
   return (
     <View onLayout={onLayout} style={[styles.container, { gap: GAP_MEDIA }]}>
-      <FlatList
-        data={arrMediaShow || []}
-        renderItem={({ item, index }) => (
-          <MediaItem
-            item={item}
-            index={index}
-            size={size}
-            arrMedia={arrMedia}
-            isShowAll={!!isShowAll}
-            isReaction={isReaction}
-            currentMessage={currentMessage}
-            onPressFile={onPressFile}
-            onLongPressFile={onLongPressFile}
-          />
-        )}
-        keyExtractor={(item) =>
-          item?.clientId?.toString() || item?.uri?.toString()
-        }
-        numColumns={4}
-        scrollEnabled={false}
-        columnWrapperStyle={{ gap: GAP_MEDIA }}
-        initialNumToRender={4}
-        maxToRenderPerBatch={4}
-        windowSize={5}
-        removeClippedSubviews={false} // ✅ tránh flicker
-        getItemLayout={(_, index) => ({
-          length: size,
-          offset: Math.floor(index / 4) * size,
-          index,
-        })}
-      />
+      {rows.map((row, rowIndex) => (
+        <View key={rowIndex} style={{ flexDirection: 'row', gap: GAP_MEDIA }}>
+          {row.map((item, colIndex) => {
+            const index = rowIndex * 4 + colIndex;
+            return (
+              <MediaItem
+                key={item?.clientId?.toString() || item?.uri?.toString()}
+                item={item}
+                index={index}
+                size={size}
+                arrMedia={arrMedia}
+                isShowAll={!!isShowAll}
+                isReaction={isReaction}
+                currentMessage={currentMessage}
+                onPressFile={onPressFile}
+                onLongPressFile={onLongPressFile}
+              />
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }

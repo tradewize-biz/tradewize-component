@@ -2408,6 +2408,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-clipboard/clipboard@npm:^1.16.1":
+  version: 1.16.3
+  resolution: "@react-native-clipboard/clipboard@npm:1.16.3"
+  peerDependencies:
+    react: ">= 16.9.0"
+    react-native: ">= 0.61.5"
+    react-native-macos: ">= 0.61.0"
+    react-native-windows: ">= 0.61.0"
+  peerDependenciesMeta:
+    react-native-macos:
+      optional: true
+    react-native-windows:
+      optional: true
+  checksum: 3d9944fc2c4acbecf917e752cc36ec92c4dcdb590c94c81c78c24df9ddd4b02448e252eb39e0949000b01046cfdfe2b03e1676c5e3ac0fe7eb3bf6b649970c27
+  languageName: node
+  linkType: hard
+
 "@react-native-community/blur@npm:4.4.1":
   version: 4.4.1
   resolution: "@react-native-community/blur@npm:4.4.1"
@@ -11892,6 +11909,7 @@ __metadata:
     "@commitlint/config-conventional": ^17.0.2
     "@evilmartians/lefthook": ^1.5.0
     "@expo/react-native-action-sheet": 4.1.1
+    "@react-native-clipboard/clipboard": ^1.16.1
     "@react-native-community/blur": 4.4.1
     "@react-native-community/cli": 19.0.0
     "@react-native-community/slider": 4.5.7
@@ -11936,6 +11954,7 @@ __metadata:
     typescript: ^5.2.2
   peerDependencies:
     "@expo/react-native-action-sheet": ">=4.1.1"
+    "@react-native-clipboard/clipboard": ">=1.14.0"
     "@react-native-community/blur": ">=4.4.1"
     "@react-native-community/slider": ">=4.5.7"
     mime: ">=4.0.7"

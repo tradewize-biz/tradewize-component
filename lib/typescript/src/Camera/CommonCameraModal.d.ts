@@ -1,10 +1,15 @@
 import React from 'react';
 import type { CameraProps } from './CameraComponent';
-import { type ModalProps } from 'react-native-modal';
 export interface CameraModalProps extends Omit<CameraProps, 'onClose'> {
     visible: boolean;
     onClose: () => void;
-    modalProps?: Partial<ModalProps>;
+    /**
+     * Animation type for the modal transition.
+     * - 'slide': slides up from bottom (default, recommended for camera)
+     * - 'fade': fades in
+     * - 'none': no animation
+     */
+    animationType?: 'slide' | 'fade' | 'none';
     titleErrorPermission?: string;
     txtButtonPermission?: string;
     txtRequestingPermissions?: string;

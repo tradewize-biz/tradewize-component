@@ -15,7 +15,6 @@ import {
   type TextInputContentSizeChangeEventData,
   View,
   Image,
-  Text,
 } from 'react-native';
 import {
   MIN_COMPOSER_HEIGHT,
@@ -68,7 +67,6 @@ export const Composer = forwardRef(
     const dimensionsRef: any = useRef<{ width: number; height: number }>(null);
     const [isFocused, setIsFocused] = useState(false);
     const [isPickerOpen, setIsPickerOpen] = useState(false);
-    const [widthText, setWidthText] = useState(0);
     const [lineCount, setLineCount] = useState(1);
 
     // Reset lineCount khi text trống (đặc biệt hữu ích trên Android)
@@ -90,7 +88,6 @@ export const Composer = forwardRef(
               dimensionsRef.current.height !== dimensions.height))
         ) {
           dimensionsRef.current = dimensions;
-          setWidthText(dimensions.width);
           onInputSizeChanged?.(dimensions);
         }
       },
@@ -126,11 +123,6 @@ export const Composer = forwardRef(
       },
       [determineInputSizeChange, text]
     );
-
-    const handleLayout = () => {
-      // Chỉ xử lý layout, không tính toán lineCount ở đây
-      // lineCount sẽ được tính trong handleContentSizeChange
-    };
 
     const borderRadiusByLineCount = useMemo(() => {
       if (lineCount === 1) {
@@ -180,24 +172,8 @@ export const Composer = forwardRef(
                 style={styles.iconPick}
               />
             </ButtonBase>
-
-            {/* <ButtonBase
-              disabled={disableComposer}
-              onPress={() => onPressPickMedia?.('pick')}
-            >
-              <Image
-                tintColor={Color.defaultBlue}
-                resizeMode="contain"
-                source={require('./assets/photo.png')}
-                style={styles.iconPick}
-              />
-            </ButtonBase> */}
           </>
         )}
-
-        {/* <ButtonBase>
-        <Image source={require('../assets/mic.png')} style={styles.iconPick} />
-      </ButtonBase> */}
 
         <View
           style={[
@@ -252,27 +228,6 @@ export const Composer = forwardRef(
             }}
             {...textInputProps}
           />
-
-          <Text
-            onLayout={handleLayout}
-            style={[
-              styles.hiddenText,
-              {
-                width: widthText,
-              },
-            ]}
-          >
-            {text}
-          </Text>
-
-          {/* <ButtonBase>
-          <Image
-            tintColor={Color.defaultBlue}
-            resizeMode="contain"
-            source={require('../assets/smileFace.png')}
-            style={styles.iconPick}
-          />
-        </ButtonBase> */}
         </View>
       </View>
     );
@@ -320,56 +275,5 @@ const styles = StyleSheet.create({
   iconPick: {
     width: 24,
     height: 24,
-  },
-  hiddenText: {
-    position: 'absolute',
-    top: -9999,
-    left: -9999,
-    paddingRight: 8,
-    paddingLeft: 8,
-    fontWeight: '600',
-    fontSize: 16,
-    lineHeight: 22,
-    ...Platform.select({
-      web: {
-        paddingTop: 6,
-        paddingLeft: 4,
-      },
-    }),
-    marginTop: Platform.select({
-      ios: 6,
-      android: 0,
-      web: 6,
-    }),
-    marginBottom: Platform.select({
-      ios: 5,
-      android: 3,
-      web: 4,
-    }),
-  },
-  inputPreview: {
-    paddingRight: 8,
-    paddingLeft: 8,
-    ...Platform.select({
-      web: {
-        paddingTop: 6,
-        paddingLeft: 4,
-      },
-    }),
-    marginTop: Platform.select({
-      ios: 6,
-      android: 0,
-      web: 6,
-    }),
-    marginBottom: Platform.select({
-      ios: 5,
-      android: 3,
-      web: 4,
-    }),
-  },
-  txtPreview: {
-    fontWeight: '600',
-    fontSize: 16,
-    lineHeight: 22,
   },
 });

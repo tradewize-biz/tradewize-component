@@ -73,6 +73,56 @@ declare const styles: {
             color: string;
             fontWeight: "semibold";
         };
+        reactionContainer: {
+            backgroundColor: string;
+            position: "absolute";
+            minWidth: number;
+            height: number;
+            borderRadius: number;
+            justifyContent: "center";
+            alignItems: "center";
+            borderWidth: number;
+            borderColor: string;
+            bottom: number;
+            zIndex: number;
+            shadowColor: string;
+            shadowOffset: {
+                width: number;
+                height: number;
+            };
+            shadowOpacity: number;
+            shadowRadius: number;
+            elevation: number;
+            flexDirection: "row";
+            gap: number;
+        };
+        reactionEmojiText: {
+            fontSize: number;
+        };
+        reactionCountText: {
+            fontSize: number;
+        };
+        sendingIndicator: {
+            height: number;
+            alignItems: "center";
+            justifyContent: "center";
+            paddingHorizontal: number;
+        };
+        errorContainer: {
+            marginTop: number;
+            flexDirection: "row";
+            alignItems: "center";
+            gap: number;
+        };
+        errorIcon: {
+            width: number;
+            height: number;
+        };
+        errorText: {
+            fontSize: number;
+            fontWeight: "500";
+            color: string;
+        };
     };
 };
 export default styles;

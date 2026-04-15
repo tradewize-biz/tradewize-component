@@ -1,15 +1,35 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, Linking } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Linking,
+  Modal,
+  StatusBar,
+  ActivityIndicator,
+} from 'react-native';
 import { CameraComponent } from './CameraComponent';
 import type { CameraProps } from './CameraComponent';
-import Modal, { type ModalProps } from 'react-native-modal';
 import { Camera } from 'react-native-vision-camera';
 import { ButtonBase } from '../ButtonBase';
+
+type PermissionStatus =
+  | 'idle'
+  | 'checking'
+  | 'granted'
+  | 'denied'
+  | 'blocked';
 
 export interface CameraModalProps extends Omit<CameraProps, 'onClose'> {
   visible: boolean;
   onClose: () => void;
-  modalProps?: Partial<ModalProps>;
+  /**
+   * Animation type for the modal transition.
+   * - 'slide': slides up from bottom (default, recommended for camera)
+   * - 'fade': fades in
+   * - 'none': no animation
+   */
+  animationType?: 'slide' | 'fade' | 'none';
   titleErrorPermission?: string;
   txtButtonPermission?: string;
   txtRequestingPermissions?: string;
@@ -20,7 +40,7 @@ export interface CameraModalProps extends Omit<CameraProps, 'onClose'> {
 export const CameraModal: React.FC<CameraModalProps> = ({
   visible,
   onClose,
-  modalProps,
+  animationType = 'slide',
   audio = true,
   mode,
   onError,
@@ -31,41 +51,34 @@ export const CameraModal: React.FC<CameraModalProps> = ({
   txtInitializingCamera = 'Initializing camera...',
   ...cameraProps
 }) => {
-  const [hasPermission, setHasPermission] = useState<boolean>(false);
-  const [hasAudioPermission, setHasAudioPermission] = useState<boolean>(false);
-  const [isRequestingPermissions, setIsRequestingPermissions] =
+  const [permissionStatus, setPermissionStatus] =
+    useState<PermissionStatus>('idle');
+  const [hasAudioPermission, setHasAudioPermission] =
     useState<boolean>(false);
-  const [permissionDenied, setPermissionDenied] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Check and request permissions when modal becomes visible
+  // Cache permission result to avoid re-requesting on subsequent opens
+  const permissionGrantedRef = useRef<boolean>(false);
+
   const checkAndRequestPermissions = useCallback(async () => {
     try {
-      setIsRequestingPermissions(true);
+      setPermissionStatus('checking');
 
       // Check camera permission
       const cameraStatus = await Camera.getCameraPermissionStatus();
-
       let cameraGranted = cameraStatus === 'granted';
 
-      // Request camera permission if not granted
       if (!cameraGranted) {
         const newCameraStatus = await Camera.requestCameraPermission();
         cameraGranted = newCameraStatus === 'granted';
-        setHasPermission(cameraGranted);
 
         if (!cameraGranted) {
-          // Kiểm tra xem quyền có bị từ chối vĩnh viễn không
-          if (newCameraStatus === 'denied') {
-            setPermissionDenied(true);
-          }
+          // 'denied' from requestCameraPermission means permanently blocked on iOS
+          setPermissionStatus(
+            newCameraStatus === 'denied' ? 'blocked' : 'denied'
+          );
           onError?.('Camera permission is required');
-        } else {
-          setPermissionDenied(false);
+          return;
         }
-      } else {
-        setHasPermission(cameraGranted);
-        setPermissionDenied(false);
       }
 
       // Check microphone permission if audio is enabled
@@ -73,164 +86,164 @@ export const CameraModal: React.FC<CameraModalProps> = ({
         const microphoneStatus = await Camera.getMicrophonePermissionStatus();
         let audioGranted = microphoneStatus === 'granted';
 
-        // Request microphone permission if not granted
         if (!audioGranted) {
           const newMicrophoneStatus =
             await Camera.requestMicrophonePermission();
           audioGranted = newMicrophoneStatus === 'granted';
-          setHasAudioPermission(audioGranted);
 
           if (!audioGranted) {
             onError?.(
               'Microphone permission is required for video recording with audio'
             );
           }
-        } else {
-          setHasAudioPermission(audioGranted);
         }
+        setHasAudioPermission(audioGranted);
       } else {
         setHasAudioPermission(true);
       }
+
+      permissionGrantedRef.current = true;
+      setPermissionStatus('granted');
     } catch (error) {
       console.error('Error checking/requesting permissions:', error);
       onError?.('Failed to request camera permissions');
-    } finally {
-      setIsLoading(false);
-      setIsRequestingPermissions(false);
+      setPermissionStatus('denied');
     }
   }, [audio, mode, onError]);
 
-  // Check and request permissions when modal becomes visible
-  useEffect(() => {
-    if (visible) {
-      // Hiển thị loading ngay lập tức
-      setIsLoading(true);
-
-      // Delay để modal mở xong rồi mới xin quyền
-      const timer = setTimeout(() => {
-        checkAndRequestPermissions();
-      }, 500); // Delay 500ms để loading hiển thị đủ lâu
-
-      return () => clearTimeout(timer);
+  // Triggered by Modal's native onShow — no setTimeout hack needed
+  const handleModalShow = useCallback(() => {
+    if (permissionGrantedRef.current) {
+      // Already granted from a previous open, skip straight to camera
+      setPermissionStatus('granted');
     } else {
-      return undefined;
+      checkAndRequestPermissions();
     }
-  }, [visible, checkAndRequestPermissions]);
+  }, [checkAndRequestPermissions]);
+
+  // Reset visual state when modal closes (keep permission cache)
+  useEffect(() => {
+    if (!visible) {
+      setPermissionStatus('idle');
+    }
+  }, [visible]);
 
   const openSettings = useCallback(() => {
     Linking.openSettings();
   }, []);
 
-  const renderLoadingScreen = () => (
-    <View style={styles.loadingContainer}>
-      <ButtonBase style={styles.closeButton} onPress={onClose}>
-        <Text style={styles.closeButtonText}>✕</Text>
-      </ButtonBase>
-      <View style={styles.itemCenter}>
-        <Text style={styles.loadingText}>{txtInitializingCamera}</Text>
-      </View>
-    </View>
-  );
+  const renderContent = () => {
+    switch (permissionStatus) {
+      case 'idle':
+      case 'checking':
+        return (
+          <View style={styles.overlayContainer}>
+            <ButtonBase style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </ButtonBase>
+            <View style={styles.centerContent}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+              <Text style={styles.statusText}>
+                {permissionStatus === 'checking'
+                  ? txtRequestingPermissions
+                  : txtInitializingCamera}
+              </Text>
+            </View>
+          </View>
+        );
 
-  const renderPermissionScreen = () => (
-    <View style={styles.permissionContainer}>
-      <ButtonBase style={styles.closeButton} onPress={onClose}>
-        <Text style={styles.closeButtonText}>✕</Text>
-      </ButtonBase>
-      <View style={styles.itemCenter}>
-        {isRequestingPermissions ? (
-          <>
-            <Text style={styles.permissionText}>
-              {txtRequestingPermissions}
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text style={styles.permissionText}>{titleErrorPermission}</Text>
-            {permissionDenied ? (
+      case 'denied':
+      case 'blocked':
+        return (
+          <View style={styles.overlayContainer}>
+            <ButtonBase style={styles.closeButton} onPress={onClose}>
+              <Text style={styles.closeButtonText}>✕</Text>
+            </ButtonBase>
+            <View style={styles.centerContent}>
+              <Text style={styles.statusText}>{titleErrorPermission}</Text>
               <ButtonBase
                 style={styles.permissionButton}
-                onPress={openSettings}
+                onPress={
+                  permissionStatus === 'blocked'
+                    ? openSettings
+                    : checkAndRequestPermissions
+                }
               >
                 <Text style={styles.permissionButtonText}>
-                  {txtOpenSettings}
+                  {permissionStatus === 'blocked'
+                    ? txtOpenSettings
+                    : txtButtonPermission}
                 </Text>
               </ButtonBase>
-            ) : (
-              <ButtonBase
-                style={styles.permissionButton}
-                onPress={checkAndRequestPermissions}
-              >
-                <Text style={styles.permissionButtonText}>
-                  {txtButtonPermission}
-                </Text>
-              </ButtonBase>
-            )}
-          </>
-        )}
-      </View>
-    </View>
-  );
+            </View>
+          </View>
+        );
 
-  const renderCameraComponent = () => (
-    <CameraComponent
-      {...cameraProps}
-      mode={mode}
-      onClose={onClose}
-      hasPermission={hasPermission}
-      hasAudioPermission={hasAudioPermission}
-      audio={audio}
-    />
-  );
+      case 'granted':
+        return (
+          <CameraComponent
+            {...cameraProps}
+            mode={mode}
+            onClose={onClose}
+            hasPermission={true}
+            hasAudioPermission={hasAudioPermission}
+            audio={audio}
+          />
+        );
+
+      default:
+        return null;
+    }
+  };
 
   return (
     <Modal
-      propagateSwipe={false}
-      isVisible={visible}
-      animationIn="slideInUp"
-      animationOut="slideOutDown"
-      animationInTiming={300}
-      animationOutTiming={300}
-      useNativeDriver={true}
-      style={{ margin: 0, backgroundColor: 'black' }}
-      {...modalProps}
+      visible={visible}
+      animationType={animationType}
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+      onShow={handleModalShow}
+      supportedOrientations={['portrait']}
+      statusBarTranslucent
+      hardwareAccelerated
     >
-      {isLoading
-        ? renderLoadingScreen()
-        : hasPermission
-          ? renderCameraComponent()
-          : renderPermissionScreen()}
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
+      <View style={styles.container}>{renderContent()}</View>
     </Modal>
   );
 };
+
 const styles = StyleSheet.create({
-  loadingContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  overlayContainer: {
     flex: 1,
     backgroundColor: '#000',
     padding: 20,
   },
-  loadingText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 10,
-  },
-  permissionContainer: {
+  centerContent: {
     flex: 1,
-    backgroundColor: '#000',
-    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  permissionText: {
+  statusText: {
     color: '#FFFFFF',
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 20,
+    marginTop: 16,
   },
   permissionButton: {
     backgroundColor: '#007AFF',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
+    marginTop: 20,
   },
   permissionButtonText: {
     color: '#FFFFFF',
@@ -253,10 +266,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  itemCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });

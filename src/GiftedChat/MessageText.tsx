@@ -79,15 +79,6 @@ export function MessageText<TMessage extends IMessage = IMessage>({
 }: MessageTextProps<TMessage>) {
   const { actionSheet } = useChatContext();
 
-  // TODO: React.memo
-  // const shouldComponentUpdate = (nextProps: MessageTextProps<TMessage>) => {
-  //   return (
-  //     !!currentMessage &&
-  //     !!nextProps.currentMessage &&
-  //     currentMessage.text !== nextProps.currentMessage.text
-  //   )
-  // }
-
   const onUrlPress = (url: string) => {
     // When someone sends a message that includes a website address beginning with "www." (omitting the scheme),
     // react-native-parsed-text recognizes it as a valid url, but Linking fails to open due to the missing scheme.

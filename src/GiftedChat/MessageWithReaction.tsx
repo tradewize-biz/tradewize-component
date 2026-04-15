@@ -6,14 +6,11 @@ import {
   Modal,
   type LayoutChangeEvent,
   type TextStyle,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
-
-const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
 // Constants for horizontal positioning
 const HORIZONTAL_PADDING = 16;
-const MESSAGE_MAX_WIDTH = screenWidth * 0.8;
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -62,12 +59,15 @@ export const MessageWithReaction = ({
   onActionReaction,
   isShowEmoji = true,
 }: MessageWithReactionProps) => {
-  delete message.quickReplies;
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const MESSAGE_MAX_WIDTH = screenWidth * 0.8;
+  const { quickReplies: _unused, ...safeMessage } = message;
+  const displayMessage = safeMessage as IMessage;
   const [isExceedsScreenHeight, setIsExceedsScreenHeight] = useState(false);
   const [differenceLevel, setDifferenceLevel] = useState(0);
   const [messageWidth, setMessageWidth] = useState(0);
 
-  const isMyMessage = message.user?._id === user?._id;
+  const isMyMessage = displayMessage.user?._id === user?._id;
 
   // Helper function to get safe horizontal position
   const getSafeHorizontalPosition = useCallback((basePosition: number, elementWidth: number) => {
@@ -102,7 +102,7 @@ export const MessageWithReaction = ({
       messageOpacity.value = withTiming(1, { duration: 30 });
 
       // Staggered animations for reaction icons
-      if (isShowEmoji && user?._id !== message?.user?._id) {
+      if (isShowEmoji && user?._id !== displayMessage?.user?._id) {
         reactionIconOpacity.value = withDelay(
           30,
           withTiming(1, { duration: 30 })
@@ -126,7 +126,7 @@ export const MessageWithReaction = ({
     isVisible,
     isShowEmoji,
     user?._id,
-    message?.user?._id,
+    displayMessage?.user?._id,
     isMyMessage,
     overlayOpacity,
     messageScale,
@@ -305,34 +305,34 @@ export const MessageWithReaction = ({
   const renderTime = useMemo(
     () => (
       <Time
-        currentMessage={message}
+        currentMessage={displayMessage}
         position={isMyMessage ? 'right' : 'left'}
         timeTextStyle={timeTextStyle}
       />
     ),
-    [message, timeTextStyle, isMyMessage]
+    [displayMessage, timeTextStyle, isMyMessage]
   );
 
   const renderMessage = useMemo(() => {
-    if (message?.text) {
-      return <MessageText currentMessage={message} position="left" />;
+    if (displayMessage?.text) {
+      return <MessageText currentMessage={displayMessage} position="left" />;
     } else {
       return null;
     }
-  }, [message]);
+  }, [displayMessage]);
 
   const renderFile = useMemo(() => {
-    if (message?.file?.length && message?.file?.length > 0) {
+    if (displayMessage?.file?.length && displayMessage?.file?.length > 0) {
       return (
         <MessageFile
           isReaction
-          currentMessage={message}
+          currentMessage={displayMessage}
           messageWidth={{ width: position.width + 36, _id: '' }}
         />
       );
     }
     return null;
-  }, [position.width, message]);
+  }, [position.width, displayMessage]);
 
   return (
     <Modal
@@ -355,7 +355,7 @@ export const MessageWithReaction = ({
           pointerEvents="none"
         />
 
-        {isShowEmoji && user?._id !== message?.user?._id && (
+        {isShowEmoji && user?._id !== displayMessage?.user?._id && (
           <Animated.View
             style={[
               styles.reactionIcon,
@@ -368,7 +368,7 @@ export const MessageWithReaction = ({
                 key={emoji}
                 onPress={() => {
                   onClose();
-                  onReactionEmoji?.(emoji, message?._id?.toString());
+                  onReactionEmoji?.(emoji, displayMessage?._id?.toString());
                 }}
                 style={styles.reactionIconItem}
               >
@@ -403,7 +403,7 @@ export const MessageWithReaction = ({
             ]}
             onPress={() => {
               onClose();
-              onActionReaction?.(message, 'reply');
+              onActionReaction?.(displayMessage, 'reply');
             }}
           >
             <Text style={styles.btnActionText}>Reply</Text>
@@ -412,12 +412,12 @@ export const MessageWithReaction = ({
               source={require('./assets/reply.png')}
             />
           </ButtonBase>
-          {message?.text && (
+          {displayMessage?.text && (
             <ButtonBase
               style={[styles.btnAction]}
               onPress={() => {
                 onClose();
-                onActionReaction?.(message, 'copy');
+                onActionReaction?.(displayMessage, 'copy');
               }}
             >
               <Text style={styles.btnActionText}>Copy</Text>
@@ -431,7 +431,7 @@ export const MessageWithReaction = ({
             style={[styles.btnAction, styles.btnActionOther]}
             onPress={() => {
               onClose();
-              onActionReaction?.(message, 'other');
+              onActionReaction?.(displayMessage, 'other');
             }}
           >
             <Text style={styles.btnActionText}>Other</Text>

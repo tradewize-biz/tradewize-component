@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-shadow */
 import React, { memo, useCallback } from 'react';
 import { View } from 'react-native';
-import { isEqual } from 'lodash';
 
 import { Avatar } from '../Avatar';
 import Bubble from '../Bubble';
@@ -14,6 +13,31 @@ import { type MessageProps } from './types';
 import styles from './styles';
 
 export * from './types';
+
+/** Shallow comparison of message properties that affect rendering */
+function shallowMessageEqual(
+  a: IMessage | undefined,
+  b: IMessage | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+
+  return (
+    a._id === b._id &&
+    a.text === b.text &&
+    a.sent === b.sent &&
+    a.received === b.received &&
+    a.pending === b.pending &&
+    a.isSending === b.isSending &&
+    a.errorMessage === b.errorMessage &&
+    a.isShowName === b.isShowName &&
+    a.isLast === b.isLast &&
+    a.system === b.system &&
+    a.file?.length === b.file?.length &&
+    a.reactionEmoji?.length === b.reactionEmoji?.length &&
+    a.messageReply?._id === b.messageReply?._id
+  );
+}
 
 let Message: React.FC<MessageProps<IMessage>> = (
   props: MessageProps<IMessage>
@@ -112,9 +136,15 @@ let Message: React.FC<MessageProps<IMessage>> = (
 Message = memo(Message, (props, nextProps) => {
   const shouldUpdate =
     props.shouldUpdateMessage?.(props, nextProps) ||
-    !isEqual(props.currentMessage!, nextProps.currentMessage!) ||
-    !isEqual(props.previousMessage, nextProps.previousMessage) ||
-    !isEqual(props.nextMessage, nextProps.nextMessage);
+    !shallowMessageEqual(props.currentMessage, nextProps.currentMessage) ||
+    !shallowMessageEqual(
+      props.previousMessage as IMessage | undefined,
+      nextProps.previousMessage as IMessage | undefined
+    ) ||
+    !shallowMessageEqual(
+      props.nextMessage as IMessage | undefined,
+      nextProps.nextMessage as IMessage | undefined
+    );
 
   if (shouldUpdate) return false;
 

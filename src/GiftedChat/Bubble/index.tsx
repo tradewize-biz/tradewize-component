@@ -1,6 +1,6 @@
 /* eslint-disable react-native/no-inline-styles */
 /* eslint-disable @typescript-eslint/no-shadow */
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, memo } from 'react';
 import type { JSX } from 'react';
 import {
   findNodeHandle,
@@ -30,7 +30,7 @@ import FastImage from 'react-native-fast-image';
 
 export * from './types';
 
-const Bubble = <TMessage extends IMessage = IMessage>(
+const BubbleComponent = <TMessage extends IMessage = IMessage>(
   props: BubbleProps<TMessage>
 ): JSX.Element => {
   const {
@@ -82,8 +82,8 @@ const Bubble = <TMessage extends IMessage = IMessage>(
         options,
         cancelButtonIndex,
       },
-      (buttonIndex: number) => {
-        console.log('onLongPress', { buttonIndex });
+      (_buttonIndex: number) => {
+        // Action sheet button pressed
       }
     );
   }, [currentMessage, context, props]);
@@ -115,23 +115,10 @@ const Bubble = <TMessage extends IMessage = IMessage>(
           );
         }
       }
-    } catch (error) {
-      console.log('onLongPressItem', error);
+    } catch (_error) {
+      // Measurement failed silently
     }
   }, [currentMessage, onLongPressReaction]);
-
-  // const styledBubbleToNext = useCallback(() => {
-  //   if (
-  //     currentMessage &&
-  //     nextMessage &&
-  //     position &&
-  //     isSameUser(currentMessage, nextMessage) &&
-  //     isSameDay(currentMessage, nextMessage)
-  //   )
-  //     return [styles[position].containerToNext, containerToNextStyle?.[position]];
-
-  //   return null;
-  // }, [currentMessage, nextMessage, position, containerToNextStyle]);
 
   const styledBubbleToPrevious = useCallback(() => {
     if (
@@ -346,26 +333,9 @@ const Bubble = <TMessage extends IMessage = IMessage>(
       return (
         <View
           style={[
+            styles.content.reactionContainer,
             {
-              backgroundColor: Color.white,
-              position: 'absolute',
-              minWidth: 36,
               width: 18 * reactionEmoji?.length + 12,
-              height: 18,
-              borderRadius: 12,
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: Color.leftBubbleBackground,
-              bottom: -32,
-              zIndex: 10,
-              shadowColor: Color.leftBubbleBackground,
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.25,
-              shadowRadius: 3.84,
-              elevation: 3,
-              flexDirection: 'row',
-              gap: 2,
             },
             reactionPosition === 'right' && {
               left: reactionEmoji?.length
@@ -380,11 +350,11 @@ const Bubble = <TMessage extends IMessage = IMessage>(
           ]}
         >
           {reactionEmoji?.map((item, index) => (
-            <Text key={index} style={{ fontSize: 10 }}>
+            <Text key={index} style={styles.content.reactionEmojiText}>
               {item}
             </Text>
           ))}
-          <Text style={{ fontSize: 12 }}>
+          <Text style={styles.content.reactionCountText}>
             {currentMessage?.reactionEmoji?.length}
           </Text>
         </View>
@@ -455,7 +425,6 @@ const Bubble = <TMessage extends IMessage = IMessage>(
       <View
         style={[
           styles[position].wrapper,
-          // styledBubbleToNext(),
           styledBubbleToPrevious(),
           wrapperStyle && wrapperStyle[position],
         ]}
@@ -487,14 +456,7 @@ const Bubble = <TMessage extends IMessage = IMessage>(
       </View>
       {renderQuickReplies()}
       {currentMessage?.isSending && (
-        <View
-          style={{
-            height: 16,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 8,
-          }}
-        >
+        <View style={styles.content.sendingIndicator}>
           <MaterialIndicator
             color={Color.defaultColor}
             size={12}
@@ -503,21 +465,12 @@ const Bubble = <TMessage extends IMessage = IMessage>(
         </View>
       )}
       {currentMessage?.errorMessage && !currentMessage?.isSending && (
-        <View
-          style={{
-            marginTop: 4,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
+        <View style={styles.content.errorContainer}>
           <FastImage
             source={require('../../assets/warning.png')}
-            style={{ width: 12, height: 12 }}
+            style={styles.content.errorIcon}
           />
-          <Text
-            style={{ fontSize: 12, fontWeight: '500', color: Color.alizarin }}
-          >
+          <Text style={styles.content.errorText}>
             {currentMessage?.errorMessage}
           </Text>
         </View>
@@ -525,5 +478,7 @@ const Bubble = <TMessage extends IMessage = IMessage>(
     </View>
   );
 };
+
+const Bubble = memo(BubbleComponent) as typeof BubbleComponent;
 
 export default Bubble;

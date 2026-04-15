@@ -4,14 +4,16 @@ A comprehensive camera component for React Native with photo and video capture c
 
 ## Components
 
-### CommonCameraModal
+### CameraModal
 
-A reusable camera modal component that wraps the CameraComponent in a modal for easy integration.
+A reusable camera modal component that wraps the CameraComponent in a native fullscreen modal for easy integration.
+
+Uses React Native's built-in `Modal` with native transitions for optimal performance — no JS animation overhead.
 
 #### Usage
 
 ```tsx
-import { CommonCameraModal } from './src/Camera';
+import { CameraModal } from './src/Camera';
 import type { PhotoFile, VideoFile } from 'react-native-vision-camera';
 
 const MyComponent = () => {
@@ -38,7 +40,7 @@ const MyComponent = () => {
     <>
       <Button onPress={() => setShowCamera(true)}>Open Camera</Button>
 
-      <CommonCameraModal
+      <CameraModal
         visible={showCamera}
         mode={cameraMode}
         onPhotoCaptured={handlePhotoCaptured}
@@ -58,13 +60,13 @@ const MyComponent = () => {
 - `visible: boolean` - Controls modal visibility
 - `onClose: () => void` - Callback when camera is closed
 - `mode?: 'photo' | 'video' | 'both'` - Camera mode (default: 'both')
+- `animationType?: 'slide' | 'fade' | 'none'` - Modal transition animation (default: 'slide')
 - `onPhotoCaptured?: (photo: PhotoFile) => void` - Callback when photo is captured
 - `onVideoRecorded?: (video: VideoFile) => void` - Callback when video is recorded
 - `onError?: (error: string) => void` - Callback for errors
 - `flashMode?: 'off' | 'on'` - Flash mode (default: 'off')
 - `audio?: boolean` - Enable audio for video recording (default: true)
 - `initialZoom?: number` - Initial zoom level (default: 1)
-- `modalProps?: Partial<ModalProps>` - Additional modal props
 
 ### CameraComponent
 
@@ -73,10 +75,6 @@ The core camera component with full functionality.
 ### CameraExample
 
 A complete example showing all camera features.
-
-### CommonCameraUsage
-
-A simplified example showing how to use the CommonCameraModal.
 
 ## Features
 
@@ -87,8 +85,8 @@ A simplified example showing how to use the CommonCameraModal.
 - 🔍 Zoom control with slider
 - ⏸️ Video pause/resume
 - 🎤 Audio recording toggle
-- 📱 Full screen modal presentation
-- 🛡️ Permission handling
+- 📱 Full screen modal presentation (native transitions)
+- 🛡️ Permission handling with caching
 - ⚠️ Error handling
 
 ## Installation
@@ -124,13 +122,13 @@ The component automatically handles camera and microphone permissions. Make sure
 1. Import the component:
 
 ```tsx
-import { CommonCameraModal } from './src/Camera';
+import { CameraModal } from './src/Camera';
 ```
 
 2. Use it in your component:
 
 ```tsx
-<CommonCameraModal
+<CameraModal
   visible={showCamera}
   mode="both"
   onPhotoCaptured={handlePhoto}

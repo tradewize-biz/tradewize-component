@@ -18,10 +18,10 @@ import {
   Platform,
   TextInput,
   View,
-  Clipboard,
   ScrollView,
   type LayoutChangeEvent,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Actions } from '../Actions';
 import { Avatar } from '../Avatar';
 import Bubble from '../Bubble';
@@ -62,7 +62,6 @@ import { generateThumbnails, normalizeFileUri } from '../utils';
 import ImageCropPicker from 'react-native-image-crop-picker';
 import { VideoModal } from '../../VideoPlayer/VideoModal';
 import { CameraModal } from '../../Camera';
-// import ImageDrawingCanvas from '../../ImageDrawingCanvas';
 
 dayjs.extend(localizedFormat);
 
@@ -127,7 +126,7 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
 
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [composerHeight, setComposerHeight] = useState<number>(
-    minComposerHeight!
+    (minComposerHeight ?? MIN_COMPOSER_HEIGHT) as number
   );
   const [text, setText] = useState<string | undefined>(() => props.text || '');
   const [isImageViewerVisible, setIsImageViewerVisible] =
@@ -143,7 +142,10 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
   const [fileMediaAllLocal, setFileMediaAllLocal] = useState<IMessage | null>(
     null
   );
-  const [arrMessage, setArrMessage] = useState<TMessage[]>(messages);
+  const arrMessage = useMemo(
+    () => (inverted ? messages : [...messages].reverse()),
+    [messages, inverted]
+  );
   const [messageReaction, setMessageReaction] = useState<
     (IMessage & { isReply: boolean }) | null
   >(null);
@@ -161,9 +163,6 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
     };
   } | null>(null);
   const [fileMedia, setFileMedia] = useState<FileMessage[]>([]);
-  // const [fileMediaEdit, setFileMediaEdit] = useState<boolean>(false);
-  // const [fileMediaEditLocal, setFileMediaEditLocal] =
-  //   useState<FileMessage | null>(null);
   const keyboard = useReanimatedKeyboardAnimation();
   const trackingKeyboardMovement = useSharedValue(false);
   const debounceEnableTypingTimeoutId =
@@ -291,10 +290,33 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
         }, 100);
         break;
       default:
-        console.log('unknown');
         break;
     }
   }, []);
+
+  const onLongPressReaction = useCallback(
+    (message: TMessage, position: { x: number; y: number; width: number; height: number; pageX: number; pageY: number }) => {
+      setMessageSelected({ message, position });
+      setTimeout(() => {
+        setIsModalReaction(true);
+      }, 100);
+    },
+    []
+  );
+
+  const onPressFile = useCallback(
+    (file: FileMessage, isShowAll?: boolean, arrMedia?: IMessage) => {
+      if (isShowAll) {
+        setFileMediaAllLocal(arrMedia || ({} as IMessage));
+        setTimeout(() => {
+          setIsMediaAllShow(true);
+        }, 100);
+        return;
+      }
+      handlePressFile(file);
+    },
+    [handlePressFile]
+  );
 
   const renderMessages = useMemo(() => {
     if (!isInitialized) return null;
@@ -313,29 +335,8 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
           forwardRef={messageContainerRef}
           isTyping={isTyping}
           useScrollView={useScrollView}
-          onLongPressReaction={(message, position) => {
-            setMessageSelected({
-              message,
-              position,
-            });
-            setTimeout(() => {
-              setIsModalReaction(true);
-            }, 100);
-          }}
-          onPressFile={(
-            file: FileMessage,
-            isShowAll?: boolean,
-            arrMedia?: IMessage
-          ) => {
-            if (isShowAll) {
-              setFileMediaAllLocal(arrMedia || ({} as IMessage));
-              setTimeout(() => {
-                setIsMediaAllShow(true);
-              }, 100);
-              return;
-            }
-            handlePressFile(file);
-          }}
+          onLongPressReaction={onLongPressReaction}
+          onPressFile={onPressFile}
         />
         {renderChatFooter?.()}
       </View>
@@ -344,13 +345,14 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
     isInitialized,
     isTyping,
     arrMessage,
-    props,
     inverted,
     keyboardShouldPersistTaps,
     messageContainerRef,
     renderChatFooter,
-    handlePressFile,
     useScrollView,
+    onLongPressReaction,
+    onPressFile,
+    props,
   ]);
 
   const notifyInputTextReset = useCallback(() => {
@@ -478,10 +480,10 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
           };
         });
 
-        setFileMedia([...fileMedia, ...fileMediaAll] as FileMessage[]);
+        setFileMedia((prev) => [...prev, ...fileMediaAll] as FileMessage[]);
       }
     },
-    [fileMedia]
+    []
   );
 
   const onInitialLayoutViewLayout = useCallback(
@@ -507,13 +509,21 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
     ]
   );
 
+  const handleRemoveFile = useCallback((file: FileMessage) => {
+    setFileMedia((prev) => prev.filter((item) => item.id !== file.id));
+  }, []);
+
+  const clearMessageReaction = useCallback(() => {
+    setMessageReaction(null);
+  }, []);
+
   const inputToolbarFragment = useMemo(() => {
     if (!isInitialized) return null;
 
     const inputToolbarProps = {
       ...props,
       text: getTextFromProp(text!),
-      composerHeight: Math.max(minComposerHeight!, composerHeight),
+      composerHeight: Math.max((minComposerHeight ?? MIN_COMPOSER_HEIGHT) as number, composerHeight),
       onSend: _onSend,
       onInputSizeChanged,
       onTextChanged: _onInputTextChanged,
@@ -528,23 +538,14 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
 
     return (
       <InputToolbar
-        // onEditFileImage={(file: FileMessage) => {
-        //   setFileMediaEdit(true);
-        //   setFileMediaEditLocal(file);
-        // }}
         isMe={(user as User)?._id === messageReaction?.user?._id}
         onFocusInput={onFocusInput}
         onBlurInput={onBlurInput}
         labelReaction={labelReaction}
         messageReaction={messageReaction as IMessage & { isReply: boolean }}
-        clearMessageReaction={() => setMessageReaction(null)}
-        onRemoveFile={(file: FileMessage) => {
-          const newFileMedia = fileMedia.filter((item) => item.id !== file.id);
-          setFileMedia(newFileMedia);
-        }}
-        onPressFile={(file: FileMessage) => {
-          handlePressFile(file);
-        }}
+        clearMessageReaction={clearMessageReaction}
+        onRemoveFile={handleRemoveFile}
+        onPressFile={handlePressFile}
         fileMedia={fileMedia}
         onPressPickMedia={onPressPickMedia}
         disableComposer={props.disableComposer}
@@ -558,7 +559,6 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
     maxInputLength,
     minComposerHeight,
     onInputSizeChanged,
-    props,
     text,
     renderInputToolbar,
     composerHeight,
@@ -569,11 +569,14 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
     onPressPickMedia,
     fileMedia,
     handlePressFile,
+    handleRemoveFile,
+    clearMessageReaction,
     messageReaction,
     labelReaction,
     onFocusInput,
     onBlurInput,
     user,
+    props,
   ]);
 
   const handleReactionEmoji = useCallback(
@@ -593,7 +596,6 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
           Clipboard.setString(message.text || '');
           break;
         case 'other':
-          // setMessageReaction({ ...message, isOther: true });
           break;
         default:
           setMessageReaction(null);
@@ -618,11 +620,6 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
   useEffect(() => {
     if (props.text != null) setText(props.text);
   }, [props.text]);
-
-  useEffect(() => {
-    const prepareMessage = inverted ? messages : [...messages].reverse();
-    setArrMessage(prepareMessage);
-  }, [messages, inverted]);
 
   useAnimatedReaction(
     () => -keyboard.height.value,
@@ -757,7 +754,7 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
                       thumbnailPreview: getThumbnail[0]?.path || '',
                     };
 
-                    setFileMedia([...fileMedia, videoFile as FileMessage]);
+                    setFileMedia((prev) => [...prev, videoFile as FileMessage]);
                   }}
                   onPhotoCaptured={(photo) => {
                     setIsShowCameraModal(false);
@@ -775,7 +772,7 @@ function GiftedChat<TMessage extends IMessage = IMessage>(
                       width: photo?.width,
                       height: photo?.height,
                     };
-                    setFileMedia([...fileMedia, img as FileMessage]);
+                    setFileMedia((prev) => [...prev, img as FileMessage]);
                   }}
                   visible={isShowCameraModal}
                   onClose={() => setIsShowCameraModal(false)}

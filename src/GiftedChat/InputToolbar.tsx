@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
 import {
-  // Image,
   StyleSheet,
   Text,
   TextInput,
@@ -78,7 +77,6 @@ export function InputToolbar<TMessage extends IMessage = IMessage>(
     onBlurInput,
     messageContentReaction,
     isMe,
-    // onEditFileImage,
   } = props;
 
   const actionsFragment = useMemo(() => {
@@ -182,28 +180,6 @@ export function InputToolbar<TMessage extends IMessage = IMessage>(
                   />
                 </View>
               )}
-
-              {/* {item?.typeFile === 'image' && (
-                <TouchableOpacity
-                  onPress={() => {
-                    onEditFileImage?.(item);
-                  }}
-                  style={[
-                    styles.editFileImage,
-                    {
-                      width: getScreenWidth() * 0.06,
-                      height: getScreenWidth() * 0.06,
-                    },
-                  ]}
-                >
-                  <Image
-                    resizeMode="contain"
-                    tintColor={Color.white}
-                    source={require('./assets/write.png')}
-                    style={styles.editFileImageIcon}
-                  />
-                </TouchableOpacity>
-              )} */}
 
               {item.typeFile === 'video' && (
                 <View style={styles.previewFileItemVideo}>
@@ -477,21 +453,5 @@ const styles = StyleSheet.create({
     color: Color.white,
     fontSize: 14,
     fontWeight: 'bold',
-  },
-  editFileImage: {
-    position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: Color.defaultColor,
-    borderRadius: 100,
-    zIndex: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Color.white,
-  },
-  editFileImageIcon: {
-    width: getScreenWidth() * 0.035,
-    height: getScreenWidth() * 0.035,
   },
 });

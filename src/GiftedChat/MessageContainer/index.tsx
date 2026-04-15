@@ -107,6 +107,23 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
   const isFirstTimeAccess = useRef(true);
   const hasScrolledOnFirstAccess = useRef(false);
 
+  // Track all setTimeout IDs for cleanup on unmount
+  const timeoutIdsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const safeSetTimeout = useCallback((fn: () => void, delay: number) => {
+    const id = setTimeout(fn, delay);
+    timeoutIdsRef.current.push(id);
+    return id;
+  }, []);
+
+  // Cleanup all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutIdsRef.current.forEach(clearTimeout);
+      timeoutIdsRef.current = [];
+    };
+  }, []);
+
   const renderTypingIndicator = useCallback(() => {
     if (renderTypingIndicatorProp) return renderTypingIndicatorProp();
     return <TypingIndicator isTyping={isTyping} />;
@@ -273,8 +290,6 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
         messageItem.user = { _id: 0 };
       }
 
-      const { messages, ...restProps } = props;
-
       if (messages && user) {
         const previousMessage =
           (inverted ? messages[index + 1] : messages[index - 1]) ||
@@ -284,7 +299,7 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
           ({} as TMessage);
 
         const messageProps: ItemProps<TMessage> = {
-          ...restProps,
+          ...props,
           currentMessage: messageItem,
           previousMessage,
           nextMessage,
@@ -310,6 +325,7 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
       user,
       onPressFile,
       onLongPressReaction,
+      messages,
     ]
   );
 
@@ -374,7 +390,7 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
       listHeight.value = event.nativeEvent.layout.height;
 
       if (!inverted && isFirstRender.current.scrollToBottom) {
-        setTimeout(() => {
+        safeSetTimeout(() => {
           doScrollToBottom(false);
           isFirstRender.current.scrollToBottom = false;
         }, 500);
@@ -382,7 +398,7 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
 
       listViewProps?.onLayout?.(event);
     },
-    [inverted, doScrollToBottom, listHeight, listViewProps]
+    [inverted, doScrollToBottom, listHeight, listViewProps, safeSetTimeout]
   );
 
   const onEndReached = useCallback(() => {
@@ -398,7 +414,6 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
 
   // Handle scroll to the top for loading more messages (ScrollView version)
   const handleScrollToTop = useCallback(() => {
-    // Only trigger load more if we have more messages, not loading, and have rendered initially
     if (
       infiniteScroll &&
       loadEarlier &&
@@ -415,7 +430,7 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
       onLoadEarlier();
 
       // After loading more, try to maintain the scroll position
-      setTimeout(() => {
+      safeSetTimeout(() => {
         if (
           forwardRef?.current &&
           contentHeight.current > currentContentHeight
@@ -438,6 +453,7 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
     onLoadEarlier,
     isLoadingEarlier,
     forwardRef,
+    safeSetTimeout,
   ]);
 
   const keyExtractor: any = useCallback(
@@ -613,7 +629,7 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
       const scrollAttempts = [100, 300, 500, 800, 1200];
 
       scrollAttempts.forEach((delay, index) => {
-        setTimeout(() => {
+        safeSetTimeout(() => {
           if (messages.length > 0) {
             doScrollToBottom(index > 0); // First attempt immediate, rest animated
           }
@@ -621,7 +637,7 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
       });
 
       // Mark as no longer first time after all attempts
-      setTimeout(() => {
+      safeSetTimeout(() => {
         isFirstTimeAccess.current = false;
         hasScrolledToBottomRef.current = true;
       }, 1500);
@@ -631,10 +647,10 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
       !isFirstTimeAccess.current
     ) {
       // Regular initial scroll for subsequent loads
-      setTimeout(() => doScrollToBottom(), 100);
+      safeSetTimeout(() => doScrollToBottom(), 100);
       hasScrolledToBottomRef.current = true;
     }
-  }, [messages.length, doScrollToBottom]);
+  }, [messages.length, doScrollToBottom, safeSetTimeout]);
 
   // Reset scroll flag when messages are cleared (e.g., when switching chats)
   useEffect(() => {
@@ -648,17 +664,13 @@ function MessageContainer<TMessage extends IMessage = IMessage>(
 
   // Auto-scroll when typing indicator appears (only if user is truly at bottom)
   useEffect(() => {
-    // Only auto-scroll if:
-    // 1. Typing indicator just appeared (isTyping became true)
-    // 2. User is at the bottom
-    // 3. User is not actively scrolling up to read old messages
     if (isTyping && isAtBottom && hasScrolledToBottomRef.current) {
       // Small delay to ensure typing indicator is rendered
-      setTimeout(() => {
+      safeSetTimeout(() => {
         doScrollToBottom(true);
       }, 100);
     }
-  }, [isTyping, isAtBottom, doScrollToBottom]);
+  }, [isTyping, isAtBottom, doScrollToBottom, safeSetTimeout]);
 
   // removes unrendered days positions when messages are added/removed
   useEffect(() => {
